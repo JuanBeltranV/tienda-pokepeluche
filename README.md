@@ -157,7 +157,7 @@ docs/             # Requisitos, decisiones, verificación y plan AWS
 | description | Texto obligatorio, máximo 2000 caracteres |
 | price | Long, pesos chilenos enteros, de 1 a 999999999 |
 | stock | Integer, de 0 a 999999 |
-| imageUrl | Ruta local `/images/archivo.svg` (o png/jpg/jpeg/webp) o URL HTTPS, máximo 2048 (imagenes referenciales desde https://dokidokistore.cl/peluches/pokemon-fit) |
+| imageUrl | Ruta local `/images/archivo.svg` (o png/jpg/jpeg/webp) o URL HTTPS, máximo 2048 (imagenes referenciales desde https://dokidokistore.cl/peluches/pokemon-fit (usando la foto de lado frontal)) |
 | pokemonId | Integer positivo, obligatorio y único mediante índice SQLite |
 | pokemonName | Nombre simple alfanumérico con guiones, máximo 100; normalizado a minúsculas |
 
