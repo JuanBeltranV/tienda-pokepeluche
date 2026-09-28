@@ -1,0 +1,126 @@
+import { useEffect, useRef } from 'react'
+import {
+  Link,
+  NavLink,
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+} from 'react-router-dom'
+import {
+  ArrowUpRight,
+  BookOpen,
+  MessageSquare,
+  Settings2,
+  UserRound,
+} from 'lucide-react'
+import Catalog from './pages/Catalog'
+import ProductDetail from './pages/ProductDetail'
+import AdminProducts from './pages/AdminProducts'
+import Contact from './pages/Contact'
+import Login from './pages/Login'
+
+function Shell({ children }) {
+  const location = useLocation()
+  const main = useRef(null)
+  const first = useRef(true)
+  useEffect(() => {
+    window.scrollTo(0, 0)
+    if (first.current) first.current = false
+    else main.current.focus({ preventScroll: true })
+  }, [location.pathname])
+  return (
+    <>
+      <a href="#contenido" className="skip-link">
+        Saltar al contenido
+      </a>
+      <header className="site-header">
+        <div className="header-inner">
+          <Link
+            to="/productos"
+            className="brand"
+            aria-label="PokePeluche, inicio"
+          >
+            <span className="brand-mark">
+              <img
+                className="pokeball-icon"
+                src="/images/pokeball.svg"
+                alt=""
+              />
+            </span>
+            <span>
+              Poke<span className="brand-light">Peluche</span>
+              <small>COMPAÑEROS DE AVENTURA</small>
+            </span>
+          </Link>
+          <nav aria-label="Navegación principal">
+            <NavLink to="/productos">
+              <BookOpen size={17} />
+              Catálogo
+            </NavLink>
+            <NavLink to="/contacto">
+              <MessageSquare size={17} />
+              Contacto
+            </NavLink>
+            <NavLink to="/admin/productos">
+              <Settings2 size={17} />
+              Gestionar
+            </NavLink>
+          </nav>
+          <NavLink className="login-link" to="/login" aria-label="Mi cuenta">
+            <UserRound size={18} />
+            <span>Mi cuenta</span>
+            <ArrowUpRight size={15} />
+          </NavLink>
+        </div>
+      </header>
+      <main id="contenido" ref={main} tabIndex={-1}>
+        {children}
+      </main>
+      <footer className="site-footer">
+        <div>
+          <Link className="footer-brand" to="/productos">
+            <img className="pokeball-icon" src="/images/pokeball.svg" alt="" />
+            PokePeluche
+          </Link>
+          <span>Hecho para coleccionar sonrisas.</span>
+        </div>
+        <p>
+          Proyecto académico · Fase 1 local
+          <br />
+          Catálogo ficticio, sin ventas ni afiliación oficial.
+        </p>
+        <span className="footer-code">
+          FIN DE LA RUTA <span aria-hidden="true">✦</span>
+        </span>
+      </footer>
+    </>
+  )
+}
+
+export default function App() {
+  return (
+    <Shell>
+      <Routes>
+        <Route path="/" element={<Navigate to="/productos" replace />} />
+        <Route path="/productos" element={<Catalog />} />
+        <Route path="/productos/:id" element={<ProductDetail />} />
+        <Route path="/admin/productos" element={<AdminProducts />} />
+        <Route path="/contacto" element={<Contact />} />
+        <Route path="/login" element={<Login />} />
+        <Route
+          path="*"
+          element={
+            <div className="empty-state">
+              <span className="eyebrow">RUTA 404</span>
+              <h1>Este camino aún no existe.</h1>
+              <Link className="button primary" to="/productos">
+                Volver al catálogo
+              </Link>
+            </div>
+          }
+        />
+      </Routes>
+    </Shell>
+  )
+}
