@@ -14,8 +14,8 @@ export default function Login() {
           <em>un compañero.</em>
         </h1>
         <img
-          src="/images/hero-companion.svg"
-          alt="Ilustración original de un peluche verde"
+          src="/images/pokebola-pikachu.png"
+          alt="Peluche de Pikachu junto a una pokebola"
         />
       </section>
       <section className="login-panel">
