@@ -11,4 +11,4 @@ Implementada con AWS Amplify Auth y el User Pool Cognito existente. Ver [configu
 
 El interceptor en src/api/client.js obtiene el Access Token antes de cada petición protegida. Amplify administra almacenamiento y renovación; no hay almacenamiento manual de JWT ni logs de credenciales.
 
-Spring Boot todavía NO valida tokens ni roles. La protección efectiva de APIs mediante Resource Server y API Gateway está pendiente para otra fase.
+En Fase 3 Spring Boot valida los Access Tokens y aplica RBAC mediante Resource Server; ver docs/fase-3-resource-server.md. API Gateway y su JWT Authorizer siguen pendientes. La protección de React continúa como control de navegación y no sustituye la autorización del servidor.

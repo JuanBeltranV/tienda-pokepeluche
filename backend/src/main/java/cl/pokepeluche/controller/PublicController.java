@@ -7,6 +7,6 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/public")
 public class PublicController {
     @GetMapping("/info") public Map<String, String> info() {
-        return Map.of("name", "PokePeluche", "description", "Catálogo y gestión de peluches ficticios", "phase", "1 - local", "authentication", "Pendiente: Amazon Cognito");
+        return Map.of("name", "PokePeluche", "description", "Catálogo y gestión de peluches ficticios", "phase", "3 - Resource Server", "authentication", "Amazon Cognito Access Token JWT + RBAC");
     }
 }

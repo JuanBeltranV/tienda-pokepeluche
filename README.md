@@ -2,13 +2,13 @@
 
 Catálogo ficticio y sistema de gestión de peluches asociados a Pokémon. Proyecto de la **Actividad Sumativa Nº1: Diseño e Implementación de APIs Seguras con Spring Boot, React, SQLite, AWS Cognito y API Gateway**.
 
-**Estado: Fase 2 frontend implementada, pendiente de validación manual con Cognito.** La Fase 1 local está aprobada y publicada. Se agregan login real, sesión Amplify, rutas por rol y Access Token en Axios. **Spring Boot todavía no valida JWT ni roles**; Resource Server, API Gateway, Lambda/PokéAPI, informe y demostración final siguen pendientes. Ver [guía de Fase 2 y pruebas manuales](docs/fase-2-cognito.md). La trazabilidad completa está en [docs/requisitos.md](docs/requisitos.md).
+**Estado: Fase 3 Resource Server implementada y validada manualmente con las cuentas reales de Cognito.** Fase 2 fue validada por el propietario y publicada en 708f4b1. Spring ahora verifica Access Tokens Cognito y aplica RBAC; API Gateway, Lambda/PokéAPI, despliegue e informe final siguen pendientes. Ver [guía Fase 3 y pruebas exactas](docs/fase-3-resource-server.md).
 
 ## Alcance implementado
 
 - Spring Boot 3 en `http://localhost:8081`, arquitectura Controller → Service → Repository → Entity.
 - SQLite real (`backend/productos_db.db` al ejecutar desde `backend/`), productos y mensajes de contacto.
-- CRUD de productos, detalle, validación de datos, errores HTTP y `pokemonId` único en la base.
+- CRUD de productos, detalle, validación de datos, errores HTTP y `pokemonId` único en la base. Spring Security verifica JWT y restringe operaciones según ADMIN/EDITOR/USER.
 - React SPA en `http://localhost:3000`, React Router DOM y Axios centralizado.
 - Catálogo, búsqueda local del catálogo, detalle, gestión de productos y formulario de contacto.
 - Login propio con Amplify Auth y Cognito: SRP, contraseña temporal/cambio obligatorio, sesión persistida por el SDK, logout y navegación ADMIN/EDITOR/USER. Sin login simulado.
@@ -24,7 +24,7 @@ Implementado:
 
 ```text
 React SPA (:3000) → Amplify Auth → Cognito (sesión/JWT)
-React SPA (:3000) → Axios + Access Token → Spring Boot (:8081, sin validar JWT)
+React SPA (:3000) → Axios + Access Token → Spring Boot Resource Server (:8081, JWT + RBAC)
                                Controller
                                    ↓
                                 Service
@@ -68,7 +68,7 @@ git clone https://github.com/JuanBeltranV/tienda-pokepeluche.git
 cd tienda-pokepeluche
 ```
 
-**Nota de entrega:** la Fase 1 ya fue publicada. Los cambios de Fase 2 se mantienen locales hasta la validación manual del propietario; no se ha hecho commit ni push de esta fase.
+**Nota de entrega:** las Fases 1 y 2 están publicadas. Fase 3 fue validada por el propietario el 29 de septiembre de 2026 y aprobada para publicación en main.
 
 Terminal 1:
 
@@ -100,6 +100,8 @@ Abrir [el catálogo](http://localhost:3000/productos). Vite usa `strictPort`: si
 
 Copia `frontend/.env.example` a `frontend/.env`. Cognito requiere `VITE_COGNITO_USER_POOL_ID` y `VITE_COGNITO_CLIENT_ID`; la plantilla incluye los identificadores públicos proporcionados por el propietario. No añadas contraseñas ni Client Secret. El backend usa por defecto `http://localhost:8081/api`.
 Configura `VITE_API_BASE_URL` si necesitas cambiar la API; reinicia Vite después. En una build, la variable se incorpora al compilar. En una fase posterior podrá contener la URL de API Gateway con el prefijo que corresponda a sus rutas.
+
+El backend permite configurar COGNITO_ISSUER_URI y COGNITO_CLIENT_ID como variables del proceso. Los valores públicos de desarrollo ya están en application.properties; no se requiere Client Secret. El decoder hace discovery con Cognito al iniciar, por lo que el arranque necesita conexión. Ver docs/fase-3-resource-server.md.
 
 Las variables `VITE_*` son públicas en el navegador: **no guardar secretos allí**. El backend escucha solo en loopback y CORS permite `http://localhost:3000`, métodos GET/POST/PUT/DELETE/OPTIONS y cabeceras Content-Type/Authorization. CORS no sustituye la autenticación.
 
@@ -182,9 +184,9 @@ Los decimales en precio/stock/ID y las propiedades desconocidas se rechazan; no 
 
 ## Endpoints
 
-Base: `http://localhost:8081/api`. **El backend sigue abierto en Fase 2**: Axios ya envía Access Token, pero Spring todavía no lo valida. La matriz siguiente describe los permisos finales del servidor, no una protección ya implementada en él.
+Base: `http://localhost:8081/api`. **Backend protegido en Fase 3:** valida firma, issuer, expiración, token_use=access y client_id. Solo GET /api/public/** es público; la siguiente matriz ya se aplica en Spring. Matriz validada manualmente con las tres cuentas reales.
 
-| Método y ruta | Resultado | Permisos finales planificados |
+| Método y ruta | Resultado | Permisos aplicados en backend |
 | --- | --- | --- |
 | GET `/public/info` | 200, información general | Público |
 | GET `/products` | 200, lista por número Pokédex | ADMIN, EDITOR, USER |
@@ -232,15 +234,15 @@ npm run build
 
 Los tests del backend usan un archivo SQLite temporal independiente y no modifican la base de desarrollo. Ver [docs/verificacion.md](docs/verificacion.md) para resultados y una secuencia manual repetible.
 
-## Pendiente: validación real, seguridad backend y entrega académica
+## Próximos pasos: Gateway y entrega académica
 
-1. Validar manualmente el User Pool, App Client y usuarios por grupo ya creados por el propietario con la integración Amplify implementada.
-2. Confirmar login, contraseña temporal, roles, logout, F5 y Bearer en DevTools siguiendo docs/fase-2-cognito.md; aprobar antes de commit/push.
-3. Spring Security Resource Server con JwtAuthenticationConverter y autorización por método, incluidos los permisos diferenciados de GET `/api/contact`.
+1. Completado: matriz de seguridad backend validada con los Access Tokens reales de ADMIN, EDITOR y USER.
+2. Completado: 200 público, 401 sin token, 403 por rol y CRUD ADMIN; evidencias guardadas por el propietario.
+3. Incorporar al informe las evidencias guardadas del Resource Server y los permisos diferenciados de GET `/api/contact`.
 4. HTTP API Gateway: integración alcanzable, JWT Authorizer (Issuer/Audience), rutas y CORS.
 5. Lambda de validación/normalización de PokéAPI para el formulario de gestión y detalle. No habrá llamadas directas React → PokéAPI. Ver [lambda/README.md](lambda/README.md).
 6. Informe Word con capturas AWS, archivos ZIP de frontend/backend y preparación de demo/defensa oral.
 
 La Lambda es una extensión solicitada para este proyecto, no una exigencia explícita de la pauta. Su contrato y la relación con la futura seguridad se describen en [docs/arquitectura.md](docs/arquitectura.md).
 
-No hay contraseñas reales, tokens ni claves AWS en el repositorio. Los identificadores públicos Cognito se incluyen en .env.example. No se realiza commit, push ni deploy de Fase 2 antes de la validación del propietario.
+No hay contraseñas reales, tokens ni claves AWS en el repositorio. Los identificadores públicos Cognito se incluyen en .env.example. El propietario aprobó commit y push de Fase 3; el despliegue sigue pendiente.

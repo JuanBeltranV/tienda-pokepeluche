@@ -67,8 +67,7 @@ export default function AdminProducts() {
         <span className="dot" />
         <strong>Modo local</strong>
         <span>
-          Acceso ADMIN en la interfaz. La validación del JWT en el backend sigue
-          pendiente para la siguiente fase.
+          Gestión de productos reservada a cuentas ADMIN.
         </span>
       </div>
       {notice && (

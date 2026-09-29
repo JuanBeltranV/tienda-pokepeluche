@@ -14,6 +14,10 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.security.test.context.support.WithAnonymousUser;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -21,7 +25,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest(properties = {"app.seed-demo=false", "spring.jpa.show-sql=false"})
 @AutoConfigureMockMvc
+@WithMockUser(roles = "ADMIN")
 class ApiIntegrationTest {
+    // Business tests keep the real filter chain; a mock decoder prevents remote discovery.
+    @MockitoBean JwtDecoder jwtDecoder;
     static final Path DATABASE;
     static {
         try { DATABASE = Files.createTempFile("pokepeluche-test-", ".db"); DATABASE.toFile().deleteOnExit(); }
@@ -47,7 +54,7 @@ class ApiIntegrationTest {
         return json.readTree(response.getContentAsString()).get("id").asLong();
     }
 
-    @Test void publicInfoIsAccessible() throws Exception {
+    @Test @WithAnonymousUser void publicInfoIsAccessible() throws Exception {
         mvc.perform(get("/api/public/info")).andExpect(status().isOk()).andExpect(jsonPath("$.name").value("PokePeluche"));
     }
 

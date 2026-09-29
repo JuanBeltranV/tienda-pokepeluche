@@ -2,6 +2,8 @@
 
 Fecha: 27 de septiembre de 2026. Entorno: Windows 11, JDK Temurin 17.0.15, Maven 3.9.10, Node 22.21.0 y npm 10.9.4.
 
+Los apartados iniciales conservan la evidencia histórica de Fase 1. Consulta al final los resultados de las fases posteriores.
+
 ## Pruebas automatizadas
 
 | Verificación | Resultado |
@@ -72,3 +74,19 @@ No se validó autenticación, autorización, 401/403 de JWT, Cognito, Gateway, L
 - Revisión del login local y redirección desde /admin/productos sin sesión. Pruebas automatizadas con SDK simulado, nunca con cuentas AWS reales.
 - Los flujos Cognito reales, roles de las cuentas, contraseña temporal, F5 y Bearer deben ser validados por el propietario. No se declara superada esa verificación manual.
 - Guía detallada: [Fase 2 Cognito](fase-2-cognito.md). Sin commit ni push de esta fase.
+
+Actualización posterior: el propietario confirmó la validación manual de ADMIN, EDITOR y USER, login, cambio de contraseña, persistencia, logout, CRUD y envío de Bearer. Fase 2 publicada en `main` mediante `708f4b1`.
+
+## Verificación de Fase 3 (28 de septiembre de 2026)
+
+- Backend: 34 tests aprobados, cero fallos y cero errores: 11 de negocio con SQLite temporal, 11 de seguridad HTTP y 12 de JWT/conversión. Los filtros de seguridad permanecen activos; las pruebas no necesitan Cognito ni Internet.
+- `mvn -B -ntp verify` completó los 34 tests pero no pudo reempaquetar el JAR porque Windows lo mantenía abierto en el proceso anterior. Después de detener ese proceso, `mvn -B -ntp package -DskipTests` terminó con BUILD SUCCESS. No se omitieron las pruebas iniciales ni se cambió código para resolver ese bloqueo.
+- Frontend: `npm run lint`, 31 tests con `npm test` y `npm run build` correctos. Solo se corrigió un texto informativo obsoleto en la pantalla de gestión; autenticación y rutas conservan su lógica.
+- El JAR actualizado inició en 8081 con descubrimiento del issuer real de Cognito. Frontend en 3000 respondió 200.
+- HTTP real sin token: GET `/api/public/info` → 200; GET `/api/products` y `/api/contact` → 401. Bearer deliberadamente inválido → 401.
+- Preflight real desde `http://localhost:3000` con cabecera Authorization → 200, origen y cabecera permitidos.
+- Las pruebas automatizadas cubren la matriz ADMIN/EDITOR/USER, 401/403, grupos ausentes/múltiples, firma y claims inválidos, ausencia de sesión, política por defecto y CORS.
+- Validación manual confirmada por el propietario el 29 de septiembre de 2026: USER 200/403/403 y EDITOR 200/200/403 para GET products / GET contact / POST products; ADMIN con ambas lecturas 200 y CRUD real autorizado, comprobado en Network. Sin token: público 200, productos y contacto 401. Evidencias guardadas para el informe.
+- Instrucciones exactas y evidencias: [Fase 3 Resource Server](fase-3-resource-server.md). Commit y push autorizados por el propietario tras validar; sin despliegue ni cambios de infraestructura AWS.
+
+Cierre del 29 de septiembre de 2026: repetidos `mvn -B -ntp test` (34 aprobados), `npm test` (31 aprobados) y `npm run lint` (correcto). Los bloqueos iniciales del aislamiento para Maven/Vite se resolvieron con permisos de ejecución; no hubo cambios funcionales. Revisión de archivos y patrones sin secretos reales ni archivos generados para versionar.

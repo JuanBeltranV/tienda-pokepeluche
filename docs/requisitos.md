@@ -6,6 +6,10 @@ Fuente principal: **Actividad Sumativa Nº1.pdf**, 9 páginas, leídas completas
 
 La tabla siguiente conserva la línea base histórica de Fase 1. La Fase 2 actual implementa únicamente Cognito + Amplify Auth en React, ProtectedRoute, navegación por grupos y Axios Bearer con Access Token. Los recursos Cognito ya fueron creados por el propietario. Spring Security, API Gateway y Lambda/PokéAPI se difieren por su nueva instrucción explícita. La prueba real con las tres cuentas queda pendiente; ver [guía de Fase 2](fase-2-cognito.md).
 
+## Actualización de alcance: Fase 3
+
+Fase 2 fue validada manualmente y publicada. Fase 3 incorpora Resource Server, validación Cognito JWT y RBAC real por método/ruta, incluidos GET contacto para ADMIN/EDITOR y POST para ADMIN/EDITOR/USER. Se conservan los tests de negocio y se agregan pruebas de seguridad/criptografía sin Internet. La matriz histórica de Fase 1 que sigue no describe el estado actual; ver [Fase 3](fase-3-resource-server.md). Gateway + JWT Authorizer + CORS AWS, Lambda/PokéAPI y despliegue siguen pendientes por instrucción del propietario.
+
 ## Requisitos funcionales y técnicos
 
 | Referencia de pauta | Requisito | Estado de Fase 1 |

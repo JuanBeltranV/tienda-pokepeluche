@@ -1,5 +1,7 @@
 # Fase 2: Cognito y autenticación del frontend
 
+**Nota histórica:** Fase 2 fue validada manualmente por el propietario y publicada en 708f4b1. Las limitaciones sobre backend abierto descritas abajo correspondían a esa fase. Resource Server y RBAC se implementan ahora en [Fase 3](fase-3-resource-server.md).
+
 ## Alcance y estado
 
 Implementación local preparada para validación manual por el propietario. Cognito User Pool, App Client público y grupos ADMIN/EDITOR/USER fueron creados previamente por el propietario. Esta tarea no crea recursos AWS ni despliegues. No hay commit ni push de la Fase 2.

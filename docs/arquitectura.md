@@ -8,7 +8,7 @@ Spring MVC recibe DTOs con Bean Validation. Los controladores delegan al servici
 
 SQLite se crea automáticamente con una ruta relativa al directorio de ejecución. Un pool de una conexión reduce conflictos de escritura propios del entorno local. Se configura busy_timeout de 5 segundos. JPA crea tablas; `schema.sql` crea el índice único; el inicializador inserta solo si `products` está vacío. No hay datos de catálogo simulados en React. Los fixtures del frontend existen únicamente en tests aislados.
 
-## Planificado: seguridad y AWS
+## Implementado: seguridad del backend en Fase 3
 
 | Recurso | GET | POST | PUT/DELETE |
 | --- | --- | --- | --- |
@@ -16,9 +16,9 @@ SQLite se crea automáticamente con una ruta relativa al directorio de ejecució
 | /api/products y detalle | ADMIN, EDITOR, USER | ADMIN | ADMIN |
 | /api/contact | ADMIN, EDITOR | ADMIN, EDITOR, USER | No implementado |
 
-La Fase 2 implementa Cognito mediante Amplify Auth: login SRP propio, desafío de nueva contraseña, AuthProvider, ProtectedRoute, roles y Access Token por Axios. El SDK administra persistencia y renovación; los grupos se leen del payload del Access Token. Ver [Fase 2](fase-2-cognito.md). Los recursos Cognito fueron creados previamente por el propietario; su validación manual está pendiente.
+La Fase 2 implementa Cognito mediante Amplify Auth: login SRP propio, desafío de nueva contraseña, AuthProvider, ProtectedRoute, roles y Access Token por Axios. El SDK administra persistencia y renovación; los grupos se leen del payload del Access Token. Ver [Fase 2](fase-2-cognito.md). Los recursos Cognito fueron creados previamente por el propietario; su validación manual de Fase 2 ya fue aprobada y publicada en 708f4b1.
 
-La autorización efectiva del servidor permanece pendiente: Spring Security con JwtAuthenticationConverter y Gateway con JWT Authorizer no se implementan en esta fase. Las rutas del backend siguen abiertas aunque el frontend exija sesión y roles.
+La Fase 3 incorpora SecurityFilterChain stateless y NimbusJwtDecoder con discovery por issuer. Verifica RS256, issuer, exp/nbf, token_use=access y client_id. JwtAuthenticationConverter transforma cognito:groups en ROLE_* y Spring aplica la matriz anterior; no confía en permisos enviados por React. Los endpoints no previstos se deniegan, con 401 sin autenticación válida y 403 sin permiso. CORS conserva el frontend local. API Gateway + JWT Authorizer + CORS AWS siguen pendientes. Ver [Fase 3](fase-3-resource-server.md).
 
 La integración HTTP exige una dirección alcanzable desde AWS. La protección del origen, CORS y caminos públicos/privados se comprobarán de extremo a extremo en esa fase. No se considera segura una API solo por tener CORS.
 
