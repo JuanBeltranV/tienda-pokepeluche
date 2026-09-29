@@ -67,8 +67,8 @@ export default function AdminProducts() {
         <span className="dot" />
         <strong>Modo local</strong>
         <span>
-          Gestión abierta para esta fase. El acceso por roles se incorporará con
-          Cognito.
+          Acceso ADMIN en la interfaz. La validación del JWT en el backend sigue
+          pendiente para la siguiente fase.
         </span>
       </div>
       {notice && (

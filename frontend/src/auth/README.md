@@ -1,10 +1,14 @@
-# Seguridad planificada
+# Autenticación del frontend
 
-Esta carpeta reserva el lugar de `AuthContext` y `ProtectedRoute` para la Fase 2.
-No hay sesión, usuarios ficticios, token ni permisos simulados en la Fase 1.
-Las rutas actuales son públicas para probar la aplicación local.
+Implementada con AWS Amplify Auth y el User Pool Cognito existente. Ver [configuración, decisiones y pruebas manuales](../../../docs/fase-2-cognito.md).
 
-Después: Cognito (App Client sin secret), estado de sesión en memoria,
-ProtectedRoute para las rutas privadas y ADMIN para el mantenedor.
-El interceptor Bearer se añadirá a `src/api/client.js`. La autorización efectiva
-debe comprobarse también en Spring Security y API Gateway, no solo en React.
+- config.js configura Amplify desde VITE_COGNITO_USER_POOL_ID y VITE_COGNITO_CLIENT_ID.
+- AuthContext.js expone useAuth; AuthProvider.jsx administra identidad, grupos, carga, sesión y desafíos.
+- session.js consulta tokens del SDK, normaliza grupos y comunica fallos de sesión a React.
+- ProtectedRoute.jsx aplica la matriz de rutas del frontend sin montar contenido denegado.
+- UserMenu.jsx muestra identidad, grupos y cierre de sesión.
+- errors.js traduce errores sin revelar respuestas ni tokens.
+
+El interceptor en src/api/client.js obtiene el Access Token antes de cada petición protegida. Amplify administra almacenamiento y renovación; no hay almacenamiento manual de JWT ni logs de credenciales.
+
+Spring Boot todavía NO valida tokens ni roles. La protección efectiva de APIs mediante Resource Server y API Gateway está pendiente para otra fase.

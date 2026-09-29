@@ -19,8 +19,13 @@ import ProductDetail from './pages/ProductDetail'
 import AdminProducts from './pages/AdminProducts'
 import Contact from './pages/Contact'
 import Login from './pages/Login'
+import { useAuth } from './auth/AuthContext'
+import ProtectedRoute from './auth/ProtectedRoute'
+import UserMenu from './auth/UserMenu'
+import { APP_ROLES } from './auth/session'
 
 function Shell({ children }) {
+  const { authenticated, hasRole } = useAuth()
   const location = useLocation()
   const main = useRef(null)
   const first = useRef(true)
@@ -53,25 +58,33 @@ function Shell({ children }) {
               <small>COMPAÑEROS DE AVENTURA</small>
             </span>
           </Link>
-          <nav aria-label="Navegación principal">
-            <NavLink to="/productos">
-              <BookOpen size={17} />
-              Catálogo
+          {authenticated && APP_ROLES.some(hasRole) && (
+            <nav aria-label="Navegación principal">
+              <NavLink to="/productos">
+                <BookOpen size={17} />
+                Catálogo
+              </NavLink>
+              <NavLink to="/contacto">
+                <MessageSquare size={17} />
+                Contacto
+              </NavLink>
+              {hasRole('ADMIN') && (
+                <NavLink to="/admin/productos">
+                  <Settings2 size={17} />
+                  Gestionar
+                </NavLink>
+              )}
+            </nav>
+          )}
+          {authenticated ? (
+            <UserMenu />
+          ) : (
+            <NavLink className="login-link" to="/login" aria-label="Mi cuenta">
+              <UserRound size={18} />
+              <span>Mi cuenta</span>
+              <ArrowUpRight size={15} />
             </NavLink>
-            <NavLink to="/contacto">
-              <MessageSquare size={17} />
-              Contacto
-            </NavLink>
-            <NavLink to="/admin/productos">
-              <Settings2 size={17} />
-              Gestionar
-            </NavLink>
-          </nav>
-          <NavLink className="login-link" to="/login" aria-label="Mi cuenta">
-            <UserRound size={18} />
-            <span>Mi cuenta</span>
-            <ArrowUpRight size={15} />
-          </NavLink>
+          )}
         </div>
       </header>
       <main id="contenido" ref={main} tabIndex={-1}>
@@ -86,7 +99,7 @@ function Shell({ children }) {
           <span>Hecho para coleccionar sonrisas.</span>
         </div>
         <p>
-          Proyecto académico · Fase 1 local
+          Proyecto académico · Fase 2
           <br />
           Catálogo ficticio, sin ventas ni afiliación oficial.
         </p>
@@ -103,10 +116,14 @@ export default function App() {
     <Shell>
       <Routes>
         <Route path="/" element={<Navigate to="/productos" replace />} />
-        <Route path="/productos" element={<Catalog />} />
-        <Route path="/productos/:id" element={<ProductDetail />} />
-        <Route path="/admin/productos" element={<AdminProducts />} />
-        <Route path="/contacto" element={<Contact />} />
+        <Route element={<ProtectedRoute />}>
+          <Route path="/productos" element={<Catalog />} />
+          <Route path="/productos/:id" element={<ProductDetail />} />
+          <Route path="/contacto" element={<Contact />} />
+        </Route>
+        <Route element={<ProtectedRoute roles={['ADMIN']} />}>
+          <Route path="/admin/productos" element={<AdminProducts />} />
+        </Route>
         <Route path="/login" element={<Login />} />
         <Route
           path="*"

@@ -1,8 +1,8 @@
 # Arquitectura y evolución
 
-## Implementado: Fase 1
+## Base implementada: Fase 1
 
-React renderiza rutas SPA y llama a servicios en `src/api`. `client.js` contiene baseURL y timeout; Axios no usa token todavía. Componentes y páginas no conocen credenciales ni SDKs AWS. `PokemonFields` aísla el ingreso manual que será reemplazado después. `ProductImage` resuelve fallos de imágenes con un SVG local.
+React renderiza rutas SPA y llama a servicios en `src/api`. `client.js` contiene baseURL, timeout e interceptor Access Token. AuthProvider y session.js encapsulan Amplify; páginas de negocio no conocen credenciales ni SDKs AWS. `PokemonFields` aísla el ingreso manual que será reemplazado después. `ProductImage` resuelve fallos de imágenes con un SVG local.
 
 Spring MVC recibe DTOs con Bean Validation. Los controladores delegan al servicio; los servicios delimitan transacciones y consultan repositorios JPA; las entidades representan las tablas. El listado se ordena por pokemonId; contactos por fecha descendente. Los DTOs impiden que el cliente elija IDs o fechas de servidor. Los errores de negocio se traducen a 404/409 y validaciones a 400 con ProblemDetail.
 
@@ -16,7 +16,9 @@ SQLite se crea automáticamente con una ruta relativa al directorio de ejecució
 | /api/products y detalle | ADMIN, EDITOR, USER | ADMIN | ADMIN |
 | /api/contact | ADMIN, EDITOR | ADMIN, EDITOR, USER | No implementado |
 
-La siguiente fase añadirá Cognito sin Client Secret en la SPA, usuarios de prueba por grupo y gestión del ciclo de vida de JWT. El token se adjuntará desde un interceptor único. AuthContext y ProtectedRoute controlarán la experiencia del cliente; la autorización efectiva estará en Spring Security con JwtAuthenticationConverter para `cognito:groups`. Gateway validará emisor y audiencia mediante JWT Authorizer. La forma exacta de manejar access/ID tokens y renovación se decidirá al configurar Cognito, evitando copiar secretos o tokens a documentación.
+La Fase 2 implementa Cognito mediante Amplify Auth: login SRP propio, desafío de nueva contraseña, AuthProvider, ProtectedRoute, roles y Access Token por Axios. El SDK administra persistencia y renovación; los grupos se leen del payload del Access Token. Ver [Fase 2](fase-2-cognito.md). Los recursos Cognito fueron creados previamente por el propietario; su validación manual está pendiente.
+
+La autorización efectiva del servidor permanece pendiente: Spring Security con JwtAuthenticationConverter y Gateway con JWT Authorizer no se implementan en esta fase. Las rutas del backend siguen abiertas aunque el frontend exija sesión y roles.
 
 La integración HTTP exige una dirección alcanzable desde AWS. La protección del origen, CORS y caminos públicos/privados se comprobarán de extremo a extremo en esa fase. No se considera segura una API solo por tener CORS.
 

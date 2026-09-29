@@ -7,6 +7,7 @@ import ProductDetail from '../pages/ProductDetail'
 import ProductForm from '../components/ProductForm'
 import Contact from '../pages/Contact'
 import Login from '../pages/Login'
+import AuthProvider from '../auth/AuthProvider'
 import { productsApi } from '../api/products'
 import { contactApi } from '../api/contact'
 
@@ -19,6 +20,18 @@ vi.mock('../api/products', () => ({
   },
 }))
 vi.mock('../api/contact', () => ({ contactApi: { create: vi.fn() } }))
+vi.mock('aws-amplify/auth', () => ({
+  fetchAuthSession: async () => ({}),
+  getCurrentUser: vi.fn(),
+  signIn: vi.fn(),
+  confirmSignIn: vi.fn(),
+  signOut: vi.fn(),
+}))
+vi.mock('aws-amplify/utils', () => ({ Hub: { listen: () => () => {} } }))
+vi.mock('../auth/config', () => ({
+  authConfigured: true,
+  requireAuthConfig: vi.fn(),
+}))
 const product = {
   id: 1,
   name: 'Peluche Pikachu 30 cm',
@@ -168,12 +181,16 @@ describe('Flujos de la Fase 1', () => {
     })
   })
 
-  it('mantiene el login deshabilitado sin simular autenticación', () => {
-    wrapped(<Login />)
+  it('presenta el login real sin credenciales precargadas', async () => {
+    wrapped(
+      <AuthProvider>
+        <Login />
+      </AuthProvider>,
+    )
     expect(
-      screen.getByRole('button', { name: /Iniciar sesión/ }),
-    ).toBeDisabled()
-    expect(screen.getByLabelText('Contraseña')).toBeDisabled()
+      await screen.findByRole('button', { name: /Iniciar sesión/ }),
+    ).toBeEnabled()
+    expect(screen.getByLabelText('Contraseña')).toHaveValue('')
     expect(screen.getByText(/Amazon Cognito/)).toBeInTheDocument()
   })
 })

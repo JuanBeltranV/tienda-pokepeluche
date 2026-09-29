@@ -1235,3 +1235,63 @@ td {
 .card-arrow {
   color: #292933;
 }
+
+/* Auth additions retain the existing GBA windows and palette. */
+.user-menu {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-left: auto;
+  max-width: 300px;
+}
+.user-identity {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  min-width: 0;
+  flex: 1;
+}
+.user-identity small {
+  display: block;
+  font: 17px var(--pixel);
+  color: #ac2334;
+  margin-top: 4px;
+}
+.user-menu .button {
+  font-size: 19px;
+  padding: 7px 10px;
+  min-height: 40px;
+}
+.header-inner {
+  min-height: 98px;
+  height: auto;
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+.header-inner > .login-link {
+  margin-left: auto;
+}
+.login-panel .form-fields {
+  margin-top: 20px;
+}
+.login-panel .text-button {
+  margin-top: 18px;
+}
+@media (max-width: 1050px) {
+  .header-inner {
+    flex-wrap: wrap;
+  }
+  .user-menu {
+    max-width: 100%;
+  }
+}
+@media (max-width: 760px) {
+  .user-menu {
+    width: 100%;
+    order: 3;
+    padding-bottom: 10px;
+  }
+  .header-inner nav {
+    width: 100%;
+  }
+}

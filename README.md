@@ -2,7 +2,7 @@
 
 Catálogo ficticio y sistema de gestión de peluches asociados a Pokémon. Proyecto de la **Actividad Sumativa Nº1: Diseño e Implementación de APIs Seguras con Spring Boot, React, SQLite, AWS Cognito y API Gateway**.
 
-**Estado: Fase 1 local.** Esta fase implementa datos, interfaz e integración. **No completa todavía la pauta académica**: autenticación, roles, AWS, informe y demostración de seguridad siguen pendientes. La trazabilidad completa está en [docs/requisitos.md](docs/requisitos.md).
+**Estado: Fase 2 frontend implementada, pendiente de validación manual con Cognito.** La Fase 1 local está aprobada y publicada. Se agregan login real, sesión Amplify, rutas por rol y Access Token en Axios. **Spring Boot todavía no valida JWT ni roles**; Resource Server, API Gateway, Lambda/PokéAPI, informe y demostración final siguen pendientes. Ver [guía de Fase 2 y pruebas manuales](docs/fase-2-cognito.md). La trazabilidad completa está en [docs/requisitos.md](docs/requisitos.md).
 
 ## Alcance implementado
 
@@ -11,9 +11,9 @@ Catálogo ficticio y sistema de gestión de peluches asociados a Pokémon. Proye
 - CRUD de productos, detalle, validación de datos, errores HTTP y `pokemonId` único en la base.
 - React SPA en `http://localhost:3000`, React Router DOM y Axios centralizado.
 - Catálogo, búsqueda local del catálogo, detalle, gestión de productos y formulario de contacto.
-- Login exclusivamente visual y deshabilitado, sin credenciales ni sesiones ficticias.
+- Login propio con Amplify Auth y Cognito: SRP, contraseña temporal/cambio obligatorio, sesión persistida por el SDK, logout y navegación ADMIN/EDITOR/USER. Sin login simulado.
 - Diseño responsive propio con inspiración retro, ilustraciones SVG neutrales locales, navegación con teclado y estados de carga/error.
-- Rediseño Emerald: portada en mosaico, marcos GBA, paisaje pixel art original y fuente VT323 empaquetada localmente. Ver [decisiones visuales y capturas](docs/diseno.md).
+- Estética GBA, paleta Poké Ball, tarjetas neutras y fuente VT323 empaquetada localmente. Ver [decisiones visuales y capturas](docs/diseno.md).
 - Cuatro productos de demostración, creados por el backend si la tabla de productos está vacía.
 
 **No es un e-commerce:** no hay carrito, checkout, pagos, pedidos, despacho, historial de compras ni cupones. No hay integración con PokéAPI ni consultas de existencia de Pokémon en esta fase.
@@ -23,7 +23,8 @@ Catálogo ficticio y sistema de gestión de peluches asociados a Pokémon. Proye
 Implementado:
 
 ```text
-React SPA (:3000) → Axios → Spring Boot (:8081)
+React SPA (:3000) → Amplify Auth → Cognito (sesión/JWT)
+React SPA (:3000) → Axios + Access Token → Spring Boot (:8081, sin validar JWT)
                                Controller
                                    ↓
                                 Service
@@ -67,7 +68,7 @@ git clone https://github.com/JuanBeltranV/tienda-pokepeluche.git
 cd tienda-pokepeluche
 ```
 
-**Nota de entrega:** esta fase se mantiene local y no se ha hecho push. El clone reproducirá esta versión cuando el propietario publique los cambios; antes de eso, copiar el código local o transferirlo por el medio acordado.
+**Nota de entrega:** la Fase 1 ya fue publicada. Los cambios de Fase 2 se mantienen locales hasta la validación manual del propietario; no se ha hecho commit ni push de esta fase.
 
 Terminal 1:
 
@@ -97,8 +98,8 @@ Abrir [el catálogo](http://localhost:3000/productos). Vite usa `strictPort`: si
 
 ### Configuración local y futura URL de API
 
-No se requiere un archivo `.env` para ejecutar. El valor predeterminado es `http://localhost:8081/api`.
-Opcionalmente copiar `frontend/.env.example` a `frontend/.env` y establecer `VITE_API_BASE_URL`; reiniciar Vite después. En una build, la variable se incorpora al compilar. En la Fase 2 podrá contener la URL de API Gateway con el prefijo que corresponda a sus rutas.
+Copia `frontend/.env.example` a `frontend/.env`. Cognito requiere `VITE_COGNITO_USER_POOL_ID` y `VITE_COGNITO_CLIENT_ID`; la plantilla incluye los identificadores públicos proporcionados por el propietario. No añadas contraseñas ni Client Secret. El backend usa por defecto `http://localhost:8081/api`.
+Configura `VITE_API_BASE_URL` si necesitas cambiar la API; reinicia Vite después. En una build, la variable se incorpora al compilar. En una fase posterior podrá contener la URL de API Gateway con el prefijo que corresponda a sus rutas.
 
 Las variables `VITE_*` son públicas en el navegador: **no guardar secretos allí**. El backend escucha solo en loopback y CORS permite `http://localhost:3000`, métodos GET/POST/PUT/DELETE/OPTIONS y cabeceras Content-Type/Authorization. CORS no sustituye la autenticación.
 
@@ -136,7 +137,7 @@ backend/
 frontend/
   public/images/  # Ilustraciones originales locales
   src/api/        # Axios y servicios HTTP
-  src/auth/       # Solo documentación para futura seguridad
+  src/auth/       # Configuración Amplify, contexto, sesión, protección de rutas y roles
   src/components/
   src/hooks/
   src/lib/
@@ -181,7 +182,7 @@ Los decimales en precio/stock/ID y las propiedades desconocidas se rechazan; no 
 
 ## Endpoints
 
-Base: `http://localhost:8081/api`. **Todos están abiertos en Fase 1**, sin roles ficticios.
+Base: `http://localhost:8081/api`. **El backend sigue abierto en Fase 2**: Axios ya envía Access Token, pero Spring todavía no lo valida. La matriz siguiente describe los permisos finales del servidor, no una protección ya implementada en él.
 
 | Método y ruta | Resultado | Permisos finales planificados |
 | --- | --- | --- |
@@ -200,13 +201,13 @@ Validaciones: 400 con `detail` y mapa `errors` por campo; 404 para producto inex
 
 | Ruta | Función actual |
 | --- | --- |
-| `/login` | Interfaz deshabilitada; Cognito pendiente |
+| `/login` | Login Cognito, cambio obligatorio de contraseña y errores |
 | `/productos` | Tarjetas desde el backend, búsqueda del catálogo local, disponibilidad y orden |
 | `/productos/:id` | Datos persistidos y sección Pokédex pendiente |
-| `/admin/productos` | Listar, crear, editar y eliminar con confirmación |
+| `/admin/productos` | Solo ADMIN en frontend: listar, crear, editar y eliminar con confirmación |
 | `/contacto` | Enviar mensaje y confirmar persistencia |
 
-La búsqueda del catálogo filtra registros ya cargados desde SQLite: no consulta PokéAPI. El campo de imagen recibe una ruta/URL; no se implementó carga de archivos. Si una imagen no carga, se usa un placeholder local. Los SVG son neutrales y provisionales; no representan imágenes oficiales ni definitivas de cada Pokémon.
+Catálogo, detalle y contacto requieren sesión y grupo ADMIN, EDITOR o USER en el frontend. Sin sesión se redirige al login; sin rol permitido se muestra acceso denegado. La búsqueda del catálogo filtra registros ya cargados desde SQLite: no consulta PokéAPI. El campo de imagen recibe una ruta/URL; no se implementó carga de archivos. Si una imagen no carga, se usa un placeholder local. Los SVG son neutrales y provisionales; no representan imágenes oficiales ni definitivas de cada Pokémon.
 
 ## SQLite y datos iniciales
 
@@ -231,10 +232,10 @@ npm run build
 
 Los tests del backend usan un archivo SQLite temporal independiente y no modifican la base de desarrollo. Ver [docs/verificacion.md](docs/verificacion.md) para resultados y una secuencia manual repetible.
 
-## Pendiente: Fase 2 y entrega académica
+## Pendiente: validación real, seguridad backend y entrega académica
 
-1. Cognito User Pool, App Client sin secret, grupos ADMIN/EDITOR/USER y al menos un usuario por grupo.
-2. Login real, manejo de sesión y ciclo de vida de tokens; AuthContext, ProtectedRoute y Axios Bearer.
+1. Validar manualmente el User Pool, App Client y usuarios por grupo ya creados por el propietario con la integración Amplify implementada.
+2. Confirmar login, contraseña temporal, roles, logout, F5 y Bearer en DevTools siguiendo docs/fase-2-cognito.md; aprobar antes de commit/push.
 3. Spring Security Resource Server con JwtAuthenticationConverter y autorización por método, incluidos los permisos diferenciados de GET `/api/contact`.
 4. HTTP API Gateway: integración alcanzable, JWT Authorizer (Issuer/Audience), rutas y CORS.
 5. Lambda de validación/normalización de PokéAPI para el formulario de gestión y detalle. No habrá llamadas directas React → PokéAPI. Ver [lambda/README.md](lambda/README.md).
@@ -242,4 +243,4 @@ Los tests del backend usan un archivo SQLite temporal independiente y no modific
 
 La Lambda es una extensión solicitada para este proyecto, no una exigencia explícita de la pauta. Su contrato y la relación con la futura seguridad se describen en [docs/arquitectura.md](docs/arquitectura.md).
 
-No hay contraseñas, tokens, claves AWS ni configuración de Cognito en este repositorio. No se ha hecho push ni deploy durante esta fase.
+No hay contraseñas reales, tokens ni claves AWS en el repositorio. Los identificadores públicos Cognito se incluyen en .env.example. No se realiza commit, push ni deploy de Fase 2 antes de la validación del propietario.

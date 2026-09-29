@@ -63,3 +63,12 @@ Revisión Git: archivos nuevos marcados como intención de añadir para mostrar 
 ## Límites de esta verificación
 
 No se validó autenticación, autorización, 401/403 de JWT, Cognito, Gateway, Lambda, PokéAPI ni AWS, porque no están implementados en esta fase. La configuración portable y la instalación limpia fueron verificadas en este PC; queda ejecutar la misma secuencia físicamente en el notebook antes de la presentación. No se declara una auditoría completa de accesibilidad ni de seguridad.
+
+## Verificación de Fase 2 (28 de septiembre de 2026)
+
+- Frontend: `npm run lint` correcto; `npm test` con 31 tests aprobados; `npm run build` correcto.
+- Backend sin cambios funcionales: `mvn -B -ntp verify`, 11 tests aprobados y JAR generado.
+- Dependencia aws-amplify 6.22.1 instalada; npm informó cero vulnerabilidades al instalar.
+- Revisión del login local y redirección desde /admin/productos sin sesión. Pruebas automatizadas con SDK simulado, nunca con cuentas AWS reales.
+- Los flujos Cognito reales, roles de las cuentas, contraseña temporal, F5 y Bearer deben ser validados por el propietario. No se declara superada esa verificación manual.
+- Guía detallada: [Fase 2 Cognito](fase-2-cognito.md). Sin commit ni push de esta fase.
