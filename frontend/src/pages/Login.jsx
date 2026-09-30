@@ -21,7 +21,9 @@ export default function Login() {
   const from = location.state?.from
   const destination =
     typeof from === 'string' &&
-    /^\/(productos(?:\/\d+)?|contacto|admin\/productos)(?:\?.*)?$/.test(from)
+    /^\/(productos(?:\/\d+)?|contacto(?:\/mensajes)?|admin\/productos)(?:\?.*)?$/.test(
+      from,
+    )
       ? from
       : '/productos'
 

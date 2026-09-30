@@ -11,6 +11,7 @@ export default function Contact() {
   const [error, setError] = useState('')
   const [sent, setSent] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [imageFailed, setImageFailed] = useState(false)
   async function submit(event) {
     event.preventDefault()
     setBusy(true)
@@ -54,13 +55,19 @@ export default function Contact() {
           Déjanos tu pregunta, idea o simplemente un saludo.
         </p>
         <div className="contact-illustration" aria-hidden="true">
-          <MessageSquare size={64} strokeWidth={1.3} />
-          <span>✦</span>
+          {imageFailed ? (
+            <>
+              <MessageSquare size={64} strokeWidth={1.3} />
+              <span>✦</span>
+            </>
+          ) : (
+            <img
+              src="/images/imagencontacto.png"
+              alt=""
+              onError={() => setImageFailed(true)}
+            />
+          )}
         </div>
-        <p className="form-hint">
-          Formulario de demostración. Tu mensaje se guarda en el sistema local;
-          no se envía por correo.
-        </p>
       </div>
       <section className="contact-form-panel">
         <h2>Hablemos</h2>

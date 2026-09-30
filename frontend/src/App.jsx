@@ -10,6 +10,7 @@ import {
 import {
   ArrowUpRight,
   BookOpen,
+  Inbox,
   MessageSquare,
   Settings2,
   UserRound,
@@ -18,6 +19,7 @@ import Catalog from './pages/Catalog'
 import ProductDetail from './pages/ProductDetail'
 import AdminProducts from './pages/AdminProducts'
 import Contact from './pages/Contact'
+import ContactMessages from './pages/ContactMessages'
 import Login from './pages/Login'
 import { useAuth } from './auth/AuthContext'
 import ProtectedRoute from './auth/ProtectedRoute'
@@ -64,10 +66,16 @@ function Shell({ children }) {
                 <BookOpen size={17} />
                 Catálogo
               </NavLink>
-              <NavLink to="/contacto">
+              <NavLink to="/contacto" end>
                 <MessageSquare size={17} />
                 Contacto
               </NavLink>
+              {(hasRole('ADMIN') || hasRole('EDITOR')) && (
+                <NavLink to="/contacto/mensajes">
+                  <Inbox size={17} />
+                  Mensajes
+                </NavLink>
+              )}
               {hasRole('ADMIN') && (
                 <NavLink to="/admin/productos">
                   <Settings2 size={17} />
@@ -98,11 +106,6 @@ function Shell({ children }) {
           </Link>
           <span>Hecho para coleccionar sonrisas.</span>
         </div>
-        <p>
-          Proyecto académico · Fase 2
-          <br />
-          Catálogo ficticio, sin ventas ni afiliación oficial.
-        </p>
         <span className="footer-code">
           FIN DE LA RUTA <span aria-hidden="true">✦</span>
         </span>
@@ -123,6 +126,9 @@ export default function App() {
         </Route>
         <Route element={<ProtectedRoute roles={['ADMIN']} />}>
           <Route path="/admin/productos" element={<AdminProducts />} />
+        </Route>
+        <Route element={<ProtectedRoute roles={['ADMIN', 'EDITOR']} />}>
+          <Route path="/contacto/mensajes" element={<ContactMessages />} />
         </Route>
         <Route path="/login" element={<Login />} />
         <Route

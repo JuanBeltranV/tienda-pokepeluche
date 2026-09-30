@@ -14,6 +14,7 @@ import AuthProvider from '../auth/AuthProvider'
 import { useAuth } from '../auth/AuthContext'
 import App from '../App'
 import { productsApi } from '../api/products'
+import { contactApi } from '../api/contact'
 
 vi.mock('aws-amplify/auth', () => ({
   fetchAuthSession: vi.fn(),
@@ -29,6 +30,9 @@ vi.mock('../auth/config', () => ({
 }))
 vi.mock('../api/products', () => ({
   productsApi: { list: vi.fn(), get: vi.fn() },
+}))
+vi.mock('../api/contact', () => ({
+  contactApi: { list: vi.fn(), create: vi.fn() },
 }))
 
 const signedSession = (groups = ['ADMIN']) => ({
@@ -82,11 +86,120 @@ beforeEach(() => {
   confirmSignIn.mockReset()
   signOut.mockReset().mockResolvedValue(undefined)
   productsApi.list.mockResolvedValue([])
+  contactApi.list.mockReset().mockResolvedValue([])
   Hub.listen.mockImplementation(() => vi.fn())
   vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
 })
 
 describe('Autenticación y autorización del frontend', () => {
+  it.each(['ADMIN', 'EDITOR'])(
+    '%s abre Mensajes y lee todos los campos',
+    async (role) => {
+      fetchAuthSession.mockResolvedValue(signedSession([role]))
+      contactApi.list.mockResolvedValue([
+        {
+          id: 1,
+          name: 'Ana',
+          email: 'ana@example.com',
+          subject: 'Consulta de prueba',
+          message: 'Primera línea\nSegunda línea',
+          createdAt: '2026-09-30T12:00:00Z',
+        },
+      ])
+      renderApp('/contacto')
+      await userEvent.click(
+        await screen.findByRole('link', { name: 'Mensajes' }),
+      )
+      expect(await screen.findByText('Consulta de prueba')).toBeInTheDocument()
+      expect(screen.getByText('Ana')).toBeInTheDocument()
+      expect(screen.getByText('ana@example.com')).toBeInTheDocument()
+      expect(screen.getByText(/Primera línea/)).toHaveTextContent(
+        'Segunda línea',
+      )
+      expect(document.querySelector('time')).toHaveAttribute(
+        'datetime',
+        '2026-09-30T12:00:00Z',
+      )
+      expect(contactApi.list).toHaveBeenCalledWith(expect.any(AbortSignal))
+      expect(
+        screen.getByRole('link', { name: 'Contacto', exact: true }),
+      ).not.toHaveAttribute('aria-current')
+    },
+  )
+  it('USER no ve Mensajes ni puede abrir su URL directamente', async () => {
+    fetchAuthSession.mockResolvedValue(signedSession(['USER']))
+    renderApp('/contacto/mensajes')
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'no tienes permiso',
+    )
+    expect(
+      screen.queryByRole('link', { name: 'Mensajes' }),
+    ).not.toBeInTheDocument()
+    expect(contactApi.list).not.toHaveBeenCalled()
+  })
+  it('redirige al login y vuelve a Mensajes al iniciar sesión', async () => {
+    signIn.mockImplementation(async () => {
+      fetchAuthSession.mockResolvedValue(signedSession(['EDITOR']))
+      return { isSignedIn: true, nextStep: { signInStep: 'DONE' } }
+    })
+    renderApp('/contacto/mensajes')
+    await enterCredentials()
+    expect(
+      await screen.findByRole('heading', { name: 'Mensajes recibidos' }),
+    ).toBeInTheDocument()
+    expect(await screen.findByText('El buzón está vacío.')).toBeInTheDocument()
+  })
+  it('muestra carga de mensajes y luego lista vacía', async () => {
+    fetchAuthSession.mockResolvedValue(signedSession(['EDITOR']))
+    let resolve
+    contactApi.list.mockReturnValue(
+      new Promise((done) => {
+        resolve = done
+      }),
+    )
+    renderApp('/contacto/mensajes')
+    expect(await screen.findByText('Cargando mensajes…')).toBeInTheDocument()
+    await act(async () => resolve([]))
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'El buzón está vacío',
+    )
+  })
+  it('permite reintentar una lectura fallida de mensajes', async () => {
+    fetchAuthSession.mockResolvedValue(signedSession(['ADMIN']))
+    contactApi.list
+      .mockRejectedValueOnce(new Error('Network Error'))
+      .mockResolvedValueOnce([])
+    renderApp('/contacto/mensajes')
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'No pudimos obtener los mensajes',
+    )
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Volver a intentar' }),
+    )
+    expect(await screen.findByText('El buzón está vacío.')).toBeInTheDocument()
+  })
+  it('mantiene la denegación 403 del backend sin mostrar mensajes', async () => {
+    fetchAuthSession.mockResolvedValue(signedSession(['EDITOR']))
+    contactApi.list.mockRejectedValue({ response: { status: 403 } })
+    renderApp('/contacto/mensajes')
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'no tiene permiso para leer',
+    )
+    expect(
+      screen.queryByRole('list', { name: 'Mensajes recibidos' }),
+    ).not.toBeInTheDocument()
+  })
+  it('un 401 al leer mensajes invalida la sesión y muestra login', async () => {
+    fetchAuthSession.mockResolvedValue(signedSession(['EDITOR']))
+    contactApi.list.mockRejectedValue({ response: { status: 401 } })
+    renderApp('/contacto/mensajes')
+    expect(
+      await screen.findByRole('button', { name: 'Iniciar sesión' }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'sesión no está disponible',
+    )
+  })
   it('comprobar sesión al recuperar foco no desmonta el formulario con datos sin guardar', async () => {
     fetchAuthSession.mockResolvedValue(signedSession(['USER']))
     renderApp('/contacto')

@@ -1,6 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest'
 import { fetchAuthSession } from 'aws-amplify/auth'
 import { api } from '../api/client'
+import { contactApi } from '../api/contact'
 import { subscribeSessionFailure } from '../auth/session'
 vi.mock('aws-amplify/auth', () => ({
   fetchAuthSession: vi.fn(),
@@ -44,6 +45,21 @@ it('no agrega Authorization ni solicita sesión para información pública', asy
   })
   expect(adapter.mock.calls[0][0].headers.has('Authorization')).toBe(false)
   expect(fetchAuthSession).not.toHaveBeenCalled()
+})
+it('lee contacto con la instancia existente y su Access Token', async () => {
+  const previousAdapter = api.defaults.adapter
+  api.defaults.adapter = adapter
+  try {
+    const controller = new AbortController()
+    await contactApi.list(controller.signal)
+    const config = adapter.mock.calls[0][0]
+    expect(config.url).toBe('/contact')
+    expect(config.method).toBe('get')
+    expect(config.signal).toBe(controller.signal)
+    expect(config.headers.get('Authorization')).toBe('Bearer test-access-token')
+  } finally {
+    api.defaults.adapter = previousAdapter
+  }
 })
 it.each([{}, null])(
   'no envía una petición protegida sin tokens y avisa al contexto: %j',

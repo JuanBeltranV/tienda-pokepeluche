@@ -99,8 +99,7 @@ export default function Catalog() {
               {filtered.length}{' '}
               {filtered.length === 1
                 ? 'compañero en esta ruta'
-                : 'compañeros en esta ruta'}{' '}
-              <span>Precios referenciales en pesos chilenos.</span>
+                : 'compañeros en esta ruta'}
             </p>
           </>
         ) : (
