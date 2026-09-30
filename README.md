@@ -1,248 +1,273 @@
 # PokePeluche
 
-Catálogo ficticio y sistema de gestión de peluches asociados a Pokémon. Proyecto de la **Actividad Sumativa Nº1: Diseño e Implementación de APIs Seguras con Spring Boot, React, SQLite, AWS Cognito y API Gateway**.
+## Descripción
 
-**Estado: Fase 3 Resource Server implementada y validada manualmente con las cuentas reales de Cognito.** Fase 2 fue validada por el propietario y publicada en 708f4b1. Spring ahora verifica Access Tokens Cognito y aplica RBAC; API Gateway, Lambda/PokéAPI, despliegue e informe final siguen pendientes. Ver [guía Fase 3 y pruebas exactas](docs/fase-3-resource-server.md).
+Aplicación FullStack para consultar y administrar un catálogo de peluches asociados a Pokémon y recibir mensajes de contacto. Proyecto académico de APIs seguras con diseño inspirado en Pokémon Emerald/GBA, tipografía VT323 y una interfaz responsive.
 
-## Alcance implementado
+**Estado actual:** autenticación Cognito, autorización por roles en Spring, CRUD de productos y bandeja de mensajes implementados. La demostración mediante HTTP API Gateway y Cloudflare Quick Tunnel fue validada por el propietario. No hay carrito, pagos ni pedidos.
 
-- Spring Boot 3 en `http://localhost:8081`, arquitectura Controller → Service → Repository → Entity.
-- SQLite real (`backend/productos_db.db` al ejecutar desde `backend/`), productos y mensajes de contacto.
-- CRUD de productos, detalle, validación de datos, errores HTTP y `pokemonId` único en la base. Spring Security verifica JWT y restringe operaciones según ADMIN/EDITOR/USER.
-- React SPA en `http://localhost:3000`, React Router DOM y Axios centralizado.
-- Catálogo, búsqueda local del catálogo, detalle, gestión de productos y formulario de contacto.
-- Login propio con Amplify Auth y Cognito: SRP, contraseña temporal/cambio obligatorio, sesión persistida por el SDK, logout y navegación ADMIN/EDITOR/USER. Sin login simulado.
-- Diseño responsive propio con inspiración retro, ilustraciones SVG neutrales locales, navegación con teclado y estados de carga/error.
-- Estética GBA, paleta Poké Ball, tarjetas neutras y fuente VT323 empaquetada localmente. Ver [decisiones visuales y capturas](docs/diseno.md).
-- Cuatro productos de demostración, creados por el backend si la tabla de productos está vacía.
+## Funcionalidades
 
-**No es un e-commerce:** no hay carrito, checkout, pagos, pedidos, despacho, historial de compras ni cupones. No hay integración con PokéAPI ni consultas de existencia de Pokémon en esta fase.
+- Login real con Amplify Auth y Cognito, cambio obligatorio de contraseña cuando corresponde, restauración de sesión y logout.
+- Catálogo y detalle para usuarios autenticados, búsqueda sobre los productos cargados, precios en CLP y stock.
+- Creación, edición y eliminación de productos exclusivamente para ADMIN.
+- Formulario de contacto para USER, EDITOR y ADMIN.
+- **Mensajes recibidos** en `/contacto/mensajes`, solo para EDITOR y ADMIN: fecha, nombre, email, asunto y mensaje, con carga, estado vacío, errores y reintento. La vista es de lectura; no permite editar, eliminar ni responder mensajes.
+- Persistencia real en SQLite, DTOs validados y respuestas de error controladas.
+- Imágenes locales o por URL HTTPS; imagen decorativa de contacto en `frontend/public/images/imagencontacto.png`. No hay subida de archivos desde la interfaz.
+
+## Stack tecnológico
+
+| Área | Tecnologías |
+| --- | --- |
+| Frontend | React 19, React Router 7, Axios 1, Vite 7, AWS Amplify 6, Lucide React, CSS propio y VT323 |
+| Backend | Java 17, Spring Boot 3.5.11, Spring Web, Bean Validation, Spring Data JPA / Hibernate |
+| Seguridad | Spring Security OAuth2 Resource Server, Nimbus JWT, Amazon Cognito, HTTP API Gateway JWT Authorizer |
+| Persistencia | SQLite JDBC 3.45.1.0, Hibernate Community Dialects administrado por Spring Boot |
+| Demostración | Frontend y backend locales, API Gateway en AWS, Cloudflare Quick Tunnel |
+| Pruebas | JUnit, MockMvc, Spring Security Test, Mockito, Vitest, Testing Library, ESLint |
+
+Requisitos: **JDK 17**, **Maven 3.9.x**, **Node.js >=22.12** y npm; `cloudflared` solo para la ruta completa por Gateway. Las versiones reproducibles del frontend están en `frontend/package-lock.json`: usar `npm ci`. SQLite no requiere un servidor ni una instalación separada.
 
 ## Arquitectura
 
-Implementado:
-
-```text
-React SPA (:3000) → Amplify Auth → Cognito (sesión/JWT)
-React SPA (:3000) → Axios + Access Token → Spring Boot Resource Server (:8081, JWT + RBAC)
-                               Controller
-                                   ↓
-                                Service
-                                   ↓
-                               Repository
-                                   ↓
-                                 Entity → SQLite
+```mermaid
+flowchart TD
+    React["React · localhost:3000"] -->|"Login mediante Amplify Auth"| Cognito["Amazon Cognito"]
+    Cognito -->|"Emite Access Token JWT"| React
+    React -->|"Axios · Authorization: Bearer"| Gateway["AWS HTTP API Gateway · JWT Authorizer"]
+    Gateway -->|"Integración HTTP con Bearer"| Tunnel["Cloudflare Quick Tunnel"]
+    Tunnel --> Boot["Spring Boot · localhost:8081"]
+    Boot --> Security["Spring Security · validación JWT + RBAC"]
+    Security --> Controllers[Controllers]
+    Controllers --> Services[Services]
+    Services --> Repositories["Repositories · Spring Data JPA"]
+    Repositories --> Entities["Entities · Hibernate"]
+    Entities --> SQLite[(SQLite)]
 ```
 
-Arquitectura final **planificada**:
+Cognito autentica y emite tokens; después **React consume Gateway**, no Cognito, para obtener productos y mensajes. Para desarrollo también se puede usar React → Spring directamente, con la misma validación JWT y RBAC del backend.
 
-```text
-Amazon Cognito → JWT → React SPA
-                        ├─ HTTP API Gateway + JWT Authorizer → Spring Boot Resource Server → SQLite
-                        └─ HTTP API Gateway → AWS Lambda → PokéAPI
-```
+El código y las reglas Spring se verifican en este repositorio. La configuración local revisada apunta a un endpoint HTTPS de API Gateway con base `/api`. Los recursos AWS y el Quick Tunnel son externos: su funcionamiento fue confirmado por el propietario, pero **no hay una exportación ni infraestructura como código versionada** para recrearlos automáticamente al clonar. La revisión documental no constituye una nueva auditoría de la consola AWS.
 
-API Gateway debe poder alcanzar el backend por una dirección accesible desde AWS. El `localhost:8081` de un notebook **no es accesible directamente desde AWS**. La decisión de conectividad para la demo queda pendiente; no se creó ningún túnel, despliegue o recurso cloud.
+## Autenticación y autorización
 
-## Tecnologías y requisitos del equipo
+**Autenticación** comprueba la identidad/token; **autorización** decide qué operaciones puede realizar esa identidad.
 
-| Herramienta | Versión / requisito |
+- Amplify configura un Cognito User Pool y un App Client de SPA **sin Client Secret**. El login usa SRP y formulario propio, sin Hosted UI ni OAuth2 login en Spring.
+- El SDK administra la sesión y la renovación. `AuthProvider` restaura la sesión y responde a logout/fallos de renovación; `ProtectedRoute` controla navegación y roles.
+- Axios obtiene el **Access Token** antes de cada petición protegida y agrega `Authorization: Bearer <Access Token>`. El ID Token se utiliza para datos de perfil, no para autorizar la API. `GET /api/public/info` no solicita token.
+- Gateway verifica JWT en las rutas protegidas. El RBAC por grupos se aplica en **Spring**, no mediante la visibilidad de enlaces React.
+- Spring usa discovery desde el issuer y claves JWK de Cognito con Nimbus. Comprueba firma **RS256**, issuer, `exp` obligatorio y vigente, `nbf` si existe, `token_use=access` y `client_id` del App Client. Conserva la tolerancia de reloj predeterminada de 60 segundos.
+- `CognitoAuthoritiesConverter` transforma `cognito:groups` en authorities: `ADMIN` → `ROLE_ADMIN`, etc. Soporta varios grupos y claim ausente; un token sin grupos permitidos no obtiene acceso a las rutas protegidas.
+- La API es **stateless**: sin sesión HTTP, form login ni HTTP Basic. CSRF está deshabilitado para esta API con Bearer explícito. Las rutas/métodos no declarados se deniegan.
+- **401**: falta autenticación válida o token inválido/expirado. **403**: autenticación válida sin permiso suficiente. Los errores Spring usan JSON `application/problem+json`; Gateway puede rechazar una petición antes de llegar a Spring.
+
+Cerrar sesión elimina el acceso desde la aplicación; la verificación local de JWT no consulta revocación por petición. Un token emitido puede seguir siendo aceptado hasta expirar. Los cambios de grupo requieren tokens actualizados.
+
+## Matriz de permisos y rutas frontend
+
+| Función / ruta | USER | EDITOR | ADMIN |
+| --- | :---: | :---: | :---: |
+| Catálogo `/productos` | Sí | Sí | Sí |
+| Detalle `/productos/:id` | Sí | Sí | Sí |
+| Enviar contacto `/contacto` | Sí | Sí | Sí |
+| Leer mensajes `/contacto/mensajes` | No | Sí | Sí |
+| CRUD `/admin/productos` | No | No | Sí |
+
+`/login` permite iniciar sesión. Sin sesión, las rutas protegidas redirigen al login; con rol insuficiente muestran acceso restringido. USER no ve los accesos Mensajes/Gestionar y tampoco puede abrir sus URL directamente. La protección frontend no sustituye las reglas del backend.
+
+## API REST
+
+Rutas que recibe Spring; base local `http://localhost:8081/api`. Mediante Gateway se usa la URL de invocación y el prefijo configurado para las mismas operaciones.
+
+| Método | Ruta | Autenticación / roles | Éxito |
+| --- | --- | --- | --- |
+| GET | `/api/public/info` | Público | 200 |
+| GET | `/api/products` | JWT: USER, EDITOR, ADMIN | 200 |
+| GET | `/api/products/{id}` | JWT: USER, EDITOR, ADMIN | 200 |
+| POST | `/api/products` | JWT: ADMIN | 201 |
+| PUT | `/api/products/{id}` | JWT: ADMIN | 200 |
+| DELETE | `/api/products/{id}` | JWT: ADMIN | 204 |
+| POST | `/api/contact` | JWT: USER, EDITOR, ADMIN | 201 |
+| GET | `/api/contact` | JWT: EDITOR, ADMIN | 200 |
+
+Productos se listan por `pokemonId`; contactos, por fecha e ID descendentes. Validación incorrecta devuelve 400; producto inexistente, 404; asociación Pokémon duplicada, 409. Los formularios conservan sus datos cuando falla el guardado.
+
+### Datos y validación
+
+- `Product`: `id` generado, `name` (120), `description` (2000), `price` entero entre 1 y 999999999, `stock` entre 0 y 999999, `imageUrl` (2048), `pokemonId` positivo y único, `pokemonName` (100, alfanumérico con guiones, normalizado a minúsculas).
+- `imageUrl` admite `/images/archivo.svg|png|jpg|jpeg|webp` o URL HTTPS. El ID de producto es distinto del número Pokémon.
+- `Contact`: `id` generado, `name` (100), `email` (254 y formato válido), `subject` (150), `message` (3000) y `createdAt` UTC generado en el servidor. Los textos son obligatorios. La interfaz muestra fecha/hora local.
+- El backend rechaza propiedades desconocidas y decimales en campos enteros. `pokemonId` y nombre se ingresan manualmente: hoy se valida formato/unicidad, no su correspondencia mediante PokéAPI.
+- Contacto guarda mensajes en SQLite; no envía correos.
+
+## AWS y Cloudflare Tunnel
+
+La demostración validada por el propietario utiliza:
+
+| Recurso externo | Configuración de la demostración |
 | --- | --- |
-| Java JDK | 17 (probado con Temurin 17.0.15) |
-| Maven | 3.9.x (probado con 3.9.10), instalado en PATH |
-| Spring Boot | 3.5.11 |
-| Hibernate Core y Community Dialects | 6.6.42.Final, alineados por Spring Boot |
-| SQLite JDBC | 3.45.1.0, como indica la pauta |
-| Node.js | 22.12 o superior; se recomienda la rama 22 LTS (probado con 22.21.0) |
-| npm | 10.x (probado con 10.9.4) |
-| Frontend | React 19, React Router DOM 7, Axios 1, Vite 7 |
+| Cognito User Pool | Usuarios reales y grupos `ADMIN`, `EDITOR`, `USER` |
+| App Client | SPA sin Client Secret, compatible con el flujo SRP del frontend |
+| HTTP API Gateway | Rutas e integraciones HTTP hacia el backend mediante el túnel |
+| JWT Authorizer | Issuer del User Pool, audience igual al App Client, identidad desde Authorization; aplicado a rutas protegidas |
+| Ruta pública | GET `/api/public/info` sin exigir JWT |
+| CORS Gateway | Origen `http://localhost:3000`; Authorization y Content-Type permitidos; métodos de la API y preflight habilitados |
 
-Las versiones exactas del frontend quedan fijadas en `frontend/package-lock.json`. Usar `npm ci` para reproducirlas. No se necesita instalar SQLite por separado: se incluye el driver JDBC. No se requiere Python para ejecutar o probar la aplicación.
+Para Access Tokens Cognito, Gateway puede comprobar `client_id` cuando no hay `aud`; Spring exige explícitamente `client_id` y `token_use=access`. Ver [JWT Authorizers de AWS](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-jwt-authorizer.html). CORS no concede roles ni sustituye la autenticación. Spring conserva su CORS local para GET/POST/PUT/DELETE/OPTIONS y Authorization/Content-Type.
 
-## Ejecutar en este PC o en otro notebook
+**Cloudflare Quick Tunnel es un puente temporal**, no hosting de producción: permite que Gateway alcance Spring en `127.0.0.1:8081`. Su dirección HTTPS `trycloudflare.com` puede cambiar al reiniciarlo; entonces hay que actualizar la integración HTTP de Gateway. Backend y túnel deben permanecer ejecutándose. La URL del túnel también expone el origen; Spring sigue validando JWT y RBAC incluso si una llamada no pasa por Gateway. Ver [Quick Tunnels de Cloudflare](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/do-more-with-tunnels/trycloudflare/).
 
-Comprobar primero `java -version`, `mvn -version`, `node --version` y `npm --version`. Los puertos 3000 y 8081 deben estar libres. La instalación inicial necesita acceso a Maven Central y npm.
+## Estructura del proyecto
+
+```text
+backend/
+  pom.xml
+  src/main/java/cl/pokepeluche/
+    config/       # Resource Server, validadores, grupos, CORS y seed
+    controller/   # API pública, productos y contacto
+    service/      # Lógica de negocio y transacciones
+    repository/   # Spring Data JPA
+    entity/       # Product y Contact
+    dto/          # Entrada/salida y Bean Validation
+    exception/    # Errores HTTP
+  src/main/resources/  # application.properties y schema.sql
+  src/test/       # Negocio, JWT y seguridad HTTP
+frontend/
+  public/images/  # Imágenes de productos, contacto e ilustraciones
+  src/api/        # Axios y servicios de productos/contacto
+  src/auth/       # Amplify, contexto, sesión y ProtectedRoute
+  src/pages/      # Catálogo, detalle, login, gestión, contacto y mensajes
+  src/components/, hooks/, lib/, test/
+  .env.example
+lambda/           # Documentación de una mejora futura; sin implementación
+docs/             # Requisitos, diseño, capturas y registros de fases
+```
+
+Los documentos de fases conservan antecedentes históricos; sus menciones a Gateway pendiente o a una bandeja inexistente no representan el estado actual descrito aquí. [Diseño y capturas](docs/diseno.md) · [Validación JWT en Spring](docs/fase-3-resource-server.md).
+
+## Configuración e instalación
+
+### 1. Clonar y preparar variables
 
 ```sh
 git clone https://github.com/JuanBeltranV/tienda-pokepeluche.git
 cd tienda-pokepeluche
 ```
 
-**Nota de entrega:** las Fases 1 y 2 están publicadas. Fase 3 fue validada por el propietario el 29 de septiembre de 2026 y aprobada para publicación en main.
+Copia `frontend/.env.example` a `frontend/.env` (PowerShell: `Copy-Item frontend/.env.example frontend/.env`). Sustituye los placeholders siguientes por los identificadores públicos de tu entorno:
 
-Terminal 1:
+```dotenv
+VITE_API_BASE_URL=http://localhost:8081/api
+VITE_COGNITO_USER_POOL_ID=<USER_POOL_ID>
+VITE_COGNITO_CLIENT_ID=<APP_CLIENT_ID>
+```
+
+La plantilla del repositorio contiene los identificadores públicos del proyecto y la URL **directa local**. Para la demo por Gateway cambia solo `VITE_API_BASE_URL` por su URL de invocación más el prefijo de rutas, por ejemplo `https://<API_ID>.execute-api.<REGION>.amazonaws.com/api` para una etapa por defecto. Si tu etapa tiene nombre, incluye ese segmento antes de `/api`. El cliente agrega `/products` o `/contact`: evita duplicar `/api`. Reinicia Vite tras editar `.env`; en producción estas variables se incorporan al ejecutar build.
+
+Spring permite sobrescribir los valores públicos predeterminados de `application.properties` mediante variables del proceso. En PowerShell, antes de iniciar el backend:
+
+```powershell
+$env:COGNITO_ISSUER_URI = 'https://cognito-idp.<REGION>.amazonaws.com/<USER_POOL_ID>'
+$env:COGNITO_CLIENT_ID = '<APP_CLIENT_ID>'
+```
+
+Usa el mismo User Pool/App Client en React, Gateway y Spring. El backend no carga automáticamente un `.env`. Necesita Internet al iniciar para discovery de Cognito; el login también requiere Cognito disponible. Clonar no crea usuarios ni recursos AWS: utiliza los existentes con autorización o configura tu propio entorno.
+
+Las variables `VITE_*` son públicas. No guardar contraseñas, JWT, Client Secret ni claves AWS en ellas. `.env`, `node_modules`, `target`, `dist`, logs y SQLite local están excluidos de Git; `.env.example` sí está versionado.
+
+### 2. Instalar y comprobar
+
+Desde `frontend/`:
 
 ```sh
-cd backend
-mvn clean verify
-mvn spring-boot:run
-```
-
-Alternativamente, tras compilar:
-
-```sh
-java -jar target/pokepeluche-0.1.0.jar
-```
-
-Abrir [información pública](http://localhost:8081/api/public/info). Ejecutar siempre desde `backend/` para que la ruta relativa de la base sea consistente.
-
-Terminal 2, desde la raíz del repositorio:
-
-```sh
-cd frontend
-npm ci
-npm run dev
-```
-
-Abrir [el catálogo](http://localhost:3000/productos). Vite usa `strictPort`: si 3000 está ocupado, falla en vez de cambiar silenciosamente de puerto.
-
-### Configuración local y futura URL de API
-
-Copia `frontend/.env.example` a `frontend/.env`. Cognito requiere `VITE_COGNITO_USER_POOL_ID` y `VITE_COGNITO_CLIENT_ID`; la plantilla incluye los identificadores públicos proporcionados por el propietario. No añadas contraseñas ni Client Secret. El backend usa por defecto `http://localhost:8081/api`.
-Configura `VITE_API_BASE_URL` si necesitas cambiar la API; reinicia Vite después. En una build, la variable se incorpora al compilar. En una fase posterior podrá contener la URL de API Gateway con el prefijo que corresponda a sus rutas.
-
-El backend permite configurar COGNITO_ISSUER_URI y COGNITO_CLIENT_ID como variables del proceso. Los valores públicos de desarrollo ya están en application.properties; no se requiere Client Secret. El decoder hace discovery con Cognito al iniciar, por lo que el arranque necesita conexión. Ver docs/fase-3-resource-server.md.
-
-Las variables `VITE_*` son públicas en el navegador: **no guardar secretos allí**. El backend escucha solo en loopback y CORS permite `http://localhost:3000`, métodos GET/POST/PUT/DELETE/OPTIONS y cabeceras Content-Type/Authorization. CORS no sustituye la autenticación.
-
-### Si Java en Windows informa `Unable to establish loopback connection`
-
-Durante la verificación en este PC, Java 17 falló al crear un socket interno en el directorio temporal de Windows. Se comprobó el arranque usando un directorio relativo para esos sockets, sin cambiar el código ni los puertos:
-
-```sh
-java "-Djdk.net.unixdomain.tmpdir=." -jar target/pokepeluche-0.1.0.jar
-```
-
-Usar desde `backend/` después de compilar. Con Maven, la opción equivalente es:
-
-```sh
-mvn spring-boot:run "-Dspring-boot.run.jvmArguments=-Djdk.net.unixdomain.tmpdir=."
-```
-
-Es una alternativa documentada para este fallo del entorno, no una dependencia de rutas de este PC. [Propiedades de sockets de Java 17](https://docs.oracle.com/en/java/javase/17/core/java-networking.html).
-
-## Estructura
-
-```text
-backend/
-  pom.xml
-  src/main/java/cl/pokepeluche/
-    config/       # CORS e inicializador
-    controller/   # PublicController, ProductController, ContactController
-    dto/          # Contratos de entrada/salida y validaciones
-    entity/       # Product, Contact
-    exception/    # Errores HTTP
-    repository/   # Spring Data JPA
-    service/      # CRUD y datos de demostración
-  src/main/resources/  # application.properties y schema.sql
-  src/test/       # Integración con SQLite real temporal
-frontend/
-  public/images/  # Ilustraciones originales locales
-  src/api/        # Axios y servicios HTTP
-  src/auth/       # Configuración Amplify, contexto, sesión, protección de rutas y roles
-  src/components/
-  src/hooks/
-  src/lib/
-  src/pages/
-  src/test/
-lambda/           # Solo documentación, sin implementación
-docs/             # Requisitos, decisiones, verificación y plan AWS
-```
-
-## Modelo de datos
-
-`Product`:
-
-| Campo | Tipo y reglas |
-| --- | --- |
-| id | Long autogenerado; no se recibe al crear/editar |
-| name | Texto obligatorio, máximo 120 caracteres |
-| description | Texto obligatorio, máximo 2000 caracteres |
-| price | Long, pesos chilenos enteros, de 1 a 999999999 |
-| stock | Integer, de 0 a 999999 |
-| imageUrl | Ruta local `/images/archivo.svg` (o png/jpg/jpeg/webp) o URL HTTPS, máximo 2048 (imagenes referenciales desde https://dokidokistore.cl/peluches/pokemon-fit (usando la foto de lado frontal)) |
-| pokemonId | Integer positivo, obligatorio y único mediante índice SQLite |
-| pokemonName | Nombre simple alfanumérico con guiones, máximo 100; normalizado a minúsculas |
-
-Ejemplo de cuerpo POST/PUT:
-
-```json
-{
-  "name": "Peluche Pikachu 30 cm",
-  "description": "Peluche de demostración de 30 cm",
-  "price": 19990,
-  "stock": 10,
-  "imageUrl": "/images/plush-yellow.svg",
-  "pokemonId": 25,
-  "pokemonName": "pikachu"
-}
-```
-
-Los decimales en precio/stock/ID y las propiedades desconocidas se rechazan; no se truncan ni se ignoran. El ID interno del producto es distinto de `pokemonId`. La asociación se ingresa manualmente en esta fase; **no verifica existencia ni correspondencia real nombre/ID**. La base solo garantiza una asociación por número.
-
-`Contact`: `id` autogenerado, `name` (100), `email` (254, formato válido), `subject` (150), `message` (3000), `createdAt` UTC generado en el servidor. Todos los textos son obligatorios. Asunto y fecha son decisiones simples añadidas porque la pauta no define atributos. El formulario guarda mensajes, no envía emails. No se añadió bandeja de mensajes al frontend; la lectura se prueba mediante GET.
-
-## Endpoints
-
-Base: `http://localhost:8081/api`. **Backend protegido en Fase 3:** valida firma, issuer, expiración, token_use=access y client_id. Solo GET /api/public/** es público; la siguiente matriz ya se aplica en Spring. Matriz validada manualmente con las tres cuentas reales.
-
-| Método y ruta | Resultado | Permisos aplicados en backend |
-| --- | --- | --- |
-| GET `/public/info` | 200, información general | Público |
-| GET `/products` | 200, lista por número Pokédex | ADMIN, EDITOR, USER |
-| GET `/products/{id}` | 200, detalle / 404 | ADMIN, EDITOR, USER |
-| POST `/products` | 201, producto y Location | ADMIN |
-| PUT `/products/{id}` | 200, producto actualizado / 404 | ADMIN |
-| DELETE `/products/{id}` | 204 / 404 | ADMIN |
-| POST `/contact` | 201, mensaje guardado | ADMIN, EDITOR, USER |
-| GET `/contact` | 200, mensajes más recientes primero | ADMIN, EDITOR |
-
-Validaciones: 400 con `detail` y mapa `errors` por campo; 404 para producto inexistente; 409 para Pokémon duplicado. Se usa `ProblemDetail` para errores conocidos, sin exponer excepciones SQL al cliente. Axios traduce los fallos de comunicación y timeout; los formularios conservan los datos cuando falla el guardado.
-
-## Rutas React
-
-| Ruta | Función actual |
-| --- | --- |
-| `/login` | Login Cognito, cambio obligatorio de contraseña y errores |
-| `/productos` | Tarjetas desde el backend, búsqueda del catálogo local, disponibilidad y orden |
-| `/productos/:id` | Datos persistidos y sección Pokédex pendiente |
-| `/admin/productos` | Solo ADMIN en frontend: listar, crear, editar y eliminar con confirmación |
-| `/contacto` | Enviar mensaje y confirmar persistencia |
-
-Catálogo, detalle y contacto requieren sesión y grupo ADMIN, EDITOR o USER en el frontend. Sin sesión se redirige al login; sin rol permitido se muestra acceso denegado. La búsqueda del catálogo filtra registros ya cargados desde SQLite: no consulta PokéAPI. El campo de imagen recibe una ruta/URL; no se implementó carga de archivos. Si una imagen no carga, se usa un placeholder local. Los SVG son neutrales y provisionales; no representan imágenes oficiales ni definitivas de cada Pokémon.
-
-## SQLite y datos iniciales
-
-`productos_db.db` **no se versiona**: contiene datos locales y mensajes. Hibernate genera tablas con `ddl-auto=update`, y `schema.sql` crea el índice único de `pokemon_id` de forma idempotente después del esquema JPA. Esta operación es necesaria porque SQLite no admite agregar una restricción UNIQUE por ALTER TABLE del modo que intentaba Hibernate.
-
-El inicializador agrega Bulbasaur #1, Charmander #4, Squirtle #7 y Pikachu #25 **solo si la tabla products está vacía**. No rellena productos borrados mientras exista alguno ni modifica productos editados. Si se borran todos, el siguiente arranque vuelve a inicializar los cuatro; se puede evitar con `--app.seed-demo=false` al iniciar el JAR o `SEED_DEMO=false` en el entorno.
-
-Para reconstruir una demo desde cero: detener el backend, guardar una copia de `backend/productos_db.db` si se desean conservar los datos, renombrar ese archivo y reiniciar. Se crea una nueva base con productos; los contactos anteriores permanecen únicamente en la copia. No borrar una base mientras está abierta.
-
-## Verificación
-
-```sh
-# En backend/
-mvn clean verify
-
-# En frontend/
 npm ci
 npm run lint
 npm test
 npm run build
 ```
 
-Los tests del backend usan un archivo SQLite temporal independiente y no modifican la base de desarrollo. Ver [docs/verificacion.md](docs/verificacion.md) para resultados y una secuencia manual repetible.
+Desde `backend/`:
 
-## Próximos pasos: Gateway y entrega académica
+```sh
+mvn clean verify
+```
 
-1. Completado: matriz de seguridad backend validada con los Access Tokens reales de ADMIN, EDITOR y USER.
-2. Completado: 200 público, 401 sin token, 403 por rol y CRUD ADMIN; evidencias guardadas por el propietario.
-3. Incorporar al informe las evidencias guardadas del Resource Server y los permisos diferenciados de GET `/api/contact`.
-4. HTTP API Gateway: integración alcanzable, JWT Authorizer (Issuer/Audience), rutas y CORS.
-5. Lambda de validación/normalización de PokéAPI para el formulario de gestión y detalle. No habrá llamadas directas React → PokéAPI. Ver [lambda/README.md](lambda/README.md).
-6. Informe Word con capturas AWS, archivos ZIP de frontend/backend y preparación de demo/defensa oral.
+La descarga inicial de dependencias necesita npm/Maven Central. Detén el proceso del JAR antes de recompilarlo: Windows puede bloquear su reemplazo.
 
-La Lambda es una extensión solicitada para este proyecto, no una exigencia explícita de la pauta. Su contrato y la relación con la futura seguridad se describen en [docs/arquitectura.md](docs/arquitectura.md).
+### 3. Iniciar backend y frontend
 
-No hay contraseñas reales, tokens ni claves AWS en el repositorio. Los identificadores públicos Cognito se incluyen en .env.example. El propietario aprobó commit y push de Fase 3; el despliegue sigue pendiente.
+Terminal 1, desde `backend/`:
+
+```sh
+java -jar target/pokepeluche-0.1.0.jar
+```
+
+Alternativa: `mvn spring-boot:run`. Si Java en Windows informa `Unable to establish loopback connection`, usa `java "-Djdk.net.unixdomain.tmpdir=." -jar target/pokepeluche-0.1.0.jar`, alternativa comprobada en este proyecto.
+
+Terminal 2, desde `frontend/`:
+
+```sh
+npm run dev
+```
+
+Abre [PokePeluche](http://localhost:3000) y [la información pública local](http://localhost:8081/api/public/info). Los puertos 3000 y 8081 deben estar disponibles. Vite usa `strictPort`; no elige otro puerto automáticamente.
+
+### 4. Usar la ruta completa por Gateway
+
+Con `cloudflared` instalado y Spring ejecutándose, abre otra terminal:
+
+```sh
+cloudflared tunnel --url http://127.0.0.1:8081
+```
+
+Usa la URL HTTPS que devuelve el túnel como destino de las integraciones HTTP de Gateway. Conserva los métodos y paths: por ejemplo, una llamada autenticada a `/api/products` debe llegar a Spring como `/api/products`. Si se utiliza una etapa con nombre, revisa su mapeo para que Spring no reciba un prefijo extra.
+
+Mantén el Bearer hasta Spring, el JWT Authorizer en las rutas protegidas y el preflight CORS sin exigir token. Configura la base Gateway en `.env` y reinicia Vite. Al cambiar la URL del túnel, actualiza el destino Gateway, no la URL pública del frontend. La configuración AWS existente se administra fuera del repositorio; estos pasos no la aprovisionan automáticamente.
+
+### SQLite y seed
+
+Ejecuta siempre desde `backend/`: la ruta `productos_db.db` es relativa al directorio de trabajo. Hibernate genera tablas con `ddl-auto=update`; `schema.sql` aplica un índice único sobre `pokemon_id` después de JPA.
+
+Si la tabla de productos está vacía y el seed está activo, se crean Bulbasaur #1, Charmander #4, Squirtle #7 y Pikachu #25. No se sobrescriben productos existentes ni se reponen borrados mientras quede alguno. Desactívalo con `SEED_DEMO=false` o `--app.seed-demo=false` al iniciar el JAR. Una base nueva no contiene contactos; los mensajes y cambios locales no viajan al clonar.
+
+## Testing
+
+| Suite | Cobertura existente |
+| --- | --- |
+| `ApiIntegrationTest` | CRUD, validaciones, duplicados, índice SQLite, contacto, seed y CORS; filtros activos y autenticación simulada |
+| `SecurityIntegrationTest` | Matriz de roles, 401/403, grupos ausentes/múltiples, rutas denegadas, CORS y ausencia de sesión |
+| `CognitoJwtTest` | Firma con claves efímeras, issuer, exp/nbf, token_use, client_id y conversión de grupos |
+| `flows.test.jsx` | Catálogo, detalle, formularios, errores, contacto y login |
+| `auth.test.jsx` | Sesión, login, cambio de contraseña, roles, navegación, mensajes, logout y fallos de renovación |
+| `api-auth.test.js` | Bearer Access Token, lectura de contacto, API pública y protección frente a envío a otro origen |
+
+Últimas ejecuciones registradas en el desarrollo: **34 tests backend y 40 frontend aprobados**, lint y build frontend correctos. Esta actualización documental no vuelve a ejecutar esas pruebas. Backend usa SQLite temporal separado; los tests evitan depender de Cognito/AWS y los del frontend simulan SDK/HTTP. No sustituyen la validación real de Gateway, CORS, túnel y cuentas Cognito, confirmada manualmente por el propietario.
+
+## Flujo de una petición protegida y demostración
+
+1. El usuario inicia sesión en React mediante Amplify y Cognito emite tokens.
+2. Axios obtiene el Access Token y lo envía como Bearer a Gateway.
+3. El JWT Authorizer valida el token antes de invocar la integración HTTP.
+4. Quick Tunnel transporta la petición a Spring local.
+5. Spring valida firma/claims, convierte grupos a `ROLE_*` y aplica la autorización por método/ruta.
+6. Controller valida el DTO; Service ejecuta negocio; Repository/JPA/Hibernate consulta o modifica SQLite y devuelve la respuesta.
+
+Para la demo, mantén activos frontend, backend y túnel. Comprueba en Network que la API apunta al dominio Gateway:
+
+- Público sin token: `/api/public/info` → 200; productos/contacto sin token → 401.
+- USER: catálogo y envío de contacto; GET contacto y operaciones de administración → 403, sin enlaces Mensajes/Gestionar.
+- EDITOR: catálogo, envío y lectura de mensajes; operaciones de administración → 403.
+- ADMIN: lectura de mensajes y CRUD de un producto de prueba: creación 201, edición 200 y eliminación 204.
+- Recarga con F5 y cierra sesión entre cuentas. Captura estados HTTP y pantallas; oculta completamente JWT y datos personales de los mensajes.
+
+## Estado actual y mejoras futuras
+
+Cognito, Resource Server, RBAC, Gateway con JWT Authorizer, conexión de demostración por Quick Tunnel y mensajes recibidos forman parte del estado actual. El frontend y el backend siguen ejecutándose localmente; no se presenta esta demo como despliegue permanente.
+
+**Mejoras opcionales futuras**, no requisitos faltantes de esta entrega:
+
+- Lambda y PokéAPI para validar/normalizar asociaciones y completar la sección Pokédex; hoy `lambda/` solo contiene documentación y no hay consultas implementadas.
+- Despliegue permanente del backend y sustitución de Quick Tunnel por conectividad estable.
+- Infraestructura como código para reproducir los recursos externos.
